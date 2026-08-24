@@ -28,9 +28,41 @@ const membershipPlanSchema = new mongoose.Schema(
       }
     ],
 
+    description: {
+      type: String,
+      trim: true
+    },
+
+    // Lets admin attach any number of additional, ad-hoc attributes
+    // to a plan (e.g. "Spa Access" -> "Included") without changing the schema.
+    customFields: [
+      {
+        label: {
+          type: String,
+          required: true,
+          trim: true
+        },
+        value: {
+          type: String,
+          required: true,
+          trim: true
+        }
+      }
+    ],
+
     isCustom: {
       type: Boolean,
       default: false
+    },
+
+    isActive: {
+      type: Boolean,
+      default: true
+    },
+
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
     }
   },
   { timestamps: true }

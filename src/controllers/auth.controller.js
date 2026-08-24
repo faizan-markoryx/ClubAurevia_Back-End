@@ -21,16 +21,77 @@ const generateMemberId = async () => {
 };
 
 
+// exports.register = async (req, res) => {
+
+//   try {
+
+//     const { firstName, lastName, email, phone, password, activeMembership = "", welcomeLetter = false, role = "user" } = req.body;
+
+//     const exist = await User.findOne({ email });
+
+//     if (exist) {
+//       return res.status(400).json({ message: "User already exists" });
+//     }
+
+//     const hash = await bcrypt.hash(password, 10);
+
+//     const memberId = await generateMemberId();
+
+//     const user = await User.create({
+//       memberId,
+//       firstName,
+//       lastName,
+//       email,
+//       phone,
+//       password: hash,
+//       activeMembership,
+//       welcomeLetter,
+//       role
+//     });
+
+//     res.json({
+//       success: true,
+//       message: "User registered",
+//       user
+//     });
+
+//   } catch (error) {
+
+//     res.status(500).json({ message: "Server error" });
+
+//   }
+
+// };
+
+
+
 exports.register = async (req, res) => {
 
   try {
 
-    const { firstName, lastName, email, phone, password, activeMembership = "", welcomeLetter = false, role = "user" } = req.body;
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      postalCode,
+      country,
+      password,
+      activeMembership = "",
+      welcomeLetter = false,
+      role = "user"
+    } = req.body;
 
     const exist = await User.findOne({ email });
 
     if (exist) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(400).json({
+        message: "User already exists"
+      });
     }
 
     const hash = await bcrypt.hash(password, 10);
@@ -43,6 +104,15 @@ exports.register = async (req, res) => {
       lastName,
       email,
       phone,
+
+      // Address Fields
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      postalCode,
+      country,
+
       password: hash,
       activeMembership,
       welcomeLetter,
@@ -51,17 +121,23 @@ exports.register = async (req, res) => {
 
     res.json({
       success: true,
-      message: "User registered",
+      message: "Account Created",
       user
     });
 
   } catch (error) {
 
-    res.status(500).json({ message: "Server error" });
+    console.error(error);
+
+    res.status(500).json({
+      message: "Server error"
+    });
 
   }
 
 };
+
+
 
 
 exports.login = async (req, res) => {
@@ -211,22 +287,107 @@ exports.resetPassword = async (req, res) => {
 };
 
 
+
 // exports.getUsers = async (req, res) => {
-
 //   try {
-
 //     const page = parseInt(req.query.page) || 1;
 //     const limit = parseInt(req.query.limit) || 10;
+//     const search = req.query.search || "";
 
 //     const skip = (page - 1) * limit;
 
-//     const totalUsers = await User.countDocuments();
+//     // 🔍 Search filter
+//     const searchFilter = search
+//       ? {
+//           $or: [
+//             { firstName: { $regex: search, $options: "i" } },
+//             { lastName: { $regex: search, $options: "i" } },
+//             { email: { $regex: search, $options: "i" } },
+//             { memberId: { $regex: search, $options: "i" } },
+//             { phone: { $regex: search, $options: "i" } }
+//           ]
+//         }
+//       : {};
 
-//     const users = await User.find()
-//       .select("-password -otp")
-//       .sort({ createdAt: -1 })
-//       .skip(skip)
-//       .limit(limit);
+//     // 👉 total count with search
+//     const totalUsers = await User.countDocuments(searchFilter);
+
+//     const users = await User.aggregate([
+//       // 🔍 Apply search FIRST
+//       {
+//         $match: searchFilter
+//       },
+
+//       {
+//         $sort: { createdAt: -1 }
+//       },
+//       {
+//         $skip: skip
+//       },
+//       {
+//         $limit: limit
+//       },
+
+//       // 🔥 Lookup active membership (ONLY ONE - latest)
+//       {
+//         $lookup: {
+//           from: "usermemberships",
+//           let: { userId: "$_id" },
+//           pipeline: [
+//             {
+//               $match: {
+//                 $expr: { $eq: ["$user", "$$userId"] },
+//                 status: "active"
+//               }
+//             },
+//             {
+//               $sort: { createdAt: -1 }
+//             },
+//             {
+//               $limit: 1
+//             },
+//             {
+//               $lookup: {
+//                 from: "membershipplans",
+//                 localField: "membershipPlan",
+//                 foreignField: "_id",
+//                 as: "plan"
+//               }
+//             },
+//             {
+//               $unwind: {
+//                 path: "$plan",
+//                 preserveNullAndEmptyArrays: true
+//               }
+//             },
+//             {
+//               $project: {
+//                 _id: 1,
+//                 name: {
+//                   $ifNull: ["$customName", "$plan.name"]
+//                 }
+//               }
+//             }
+//           ],
+//           as: "activeMembership"
+//         }
+//       },
+
+//       {
+//         $addFields: {
+//           activeMembership: {
+//             $arrayElemAt: ["$activeMembership", 0]
+//           }
+//         }
+//       },
+
+//       {
+//         $project: {
+//           password: 0,
+//           otp: 0
+//         }
+//       }
+//     ]);
 
 //     res.json({
 //       success: true,
@@ -240,15 +401,25 @@ exports.resetPassword = async (req, res) => {
 //     });
 
 //   } catch (error) {
+//     console.error("Get Users Error:", error);
 
 //     res.status(500).json({
 //       success: false,
 //       message: "Server error"
 //     });
-
 //   }
-
 // };
+
+
+
+
+
+
+
+
+
+
+
 
 exports.getUsers = async (req, res) => {
   try {
@@ -275,11 +446,10 @@ exports.getUsers = async (req, res) => {
     const totalUsers = await User.countDocuments(searchFilter);
 
     const users = await User.aggregate([
-      // 🔍 Apply search FIRST
+      // 1️⃣ Apply search FIRST
       {
         $match: searchFilter
       },
-
       {
         $sort: { createdAt: -1 }
       },
@@ -290,7 +460,7 @@ exports.getUsers = async (req, res) => {
         $limit: limit
       },
 
-      // 🔥 Lookup active membership (ONLY ONE - latest)
+      // 2️⃣ Lookup active membership (ONLY ONE - latest)
       {
         $lookup: {
           from: "usermemberships",
@@ -335,6 +505,48 @@ exports.getUsers = async (req, res) => {
         }
       },
 
+      // 3️⃣ Lookup poori Membership History (Active + Expired) with Nights usage
+      {
+        $lookup: {
+          from: "usermemberships",
+          let: { userId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$user", "$$userId"] }
+              }
+            },
+            { $sort: { createdAt: -1 } },
+            {
+              $lookup: {
+                from: "membershipplans",
+                localField: "membershipPlan",
+                foreignField: "_id",
+                as: "plan"
+              }
+            },
+            {
+              $unwind: { path: "$plan", preserveNullAndEmptyArrays: true }
+            },
+            {
+              $project: {
+                _id: 1,
+                name: { $ifNull: ["$customName", "$plan.name"] },
+                totalNights: 1,
+                usedNights: 1,
+                remainingNights: 1,
+                status: 1,
+                createdAt: 1, // Assignment Date
+                usageHistory: 1,
+                pricePaid: 1
+              }
+            }
+          ],
+          as: "membershipHistory"
+        }
+      },
+
+      // 4️⃣ Format data
       {
         $addFields: {
           activeMembership: {
@@ -342,7 +554,6 @@ exports.getUsers = async (req, res) => {
           }
         }
       },
-
       {
         $project: {
           password: 0,
@@ -361,10 +572,8 @@ exports.getUsers = async (req, res) => {
       },
       users
     });
-
   } catch (error) {
     console.error("Get Users Error:", error);
-
     res.status(500).json({
       success: false,
       message: "Server error"

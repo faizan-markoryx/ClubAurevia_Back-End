@@ -39,7 +39,15 @@ const userMembershipSchema = new mongoose.Schema(
       type: String,
       enum: ["active", "expired"],
       default: "active"
-    }
+    },
+
+    usageHistory: [
+      {
+        dateUsed: { type: Date, default: Date.now },
+        nightsDeducted: { type: Number, required: true },
+        remarks: { type: String }
+      }
+    ]
   },
   { timestamps: true }
 );
