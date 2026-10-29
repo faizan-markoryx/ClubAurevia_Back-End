@@ -41,6 +41,25 @@ const userMembershipSchema = new mongoose.Schema(
       default: "active"
     },
 
+    tenure: {
+      type: String,
+      default: "3 Years"
+    },
+    mealPlan: {
+      type: String,
+      default: "Breakfast and Dinner"
+    },
+    validityFrom: {
+      type: Date
+    },
+    validityTo: {
+      type: Date
+    },
+    roomCapacity: {
+      type: String,
+      default: "2 Adult, 2 Kids below 12 years or 3 Adult + 1 Room"
+    },
+
     usageHistory: [
       {
         dateUsed: { type: Date, default: Date.now },
